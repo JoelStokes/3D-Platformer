@@ -39,6 +39,10 @@ public class PlayerController : MonoBehaviour
     private float wallJumpCount = .1f;
     private LayerMask wallJumpLayerMask;
 
+    //Walk
+    private float walkSpeed;    //Set in start, MaxSpeed / 2
+    private bool walking = false;
+
     //Fall
     private float maxVelocity = 35; //Prevent player from moving too quickly
 
@@ -55,6 +59,8 @@ public class PlayerController : MonoBehaviour
         wallJumpLayerMask = LayerMask.GetMask("Ground");
         boxCollider = GetComponent<BoxCollider2D>();
         particles = GetComponent<ParticleSystem>();
+
+        walkSpeed = maxSpeed / 2;
     }
 
     void Update(){  //Handle Timers
@@ -178,16 +184,23 @@ public class PlayerController : MonoBehaviour
 
         float newSpeed = ((value * accelerationSpeed) + dampenedVelocity);
 
-        if (newSpeed > maxSpeed){
-            newSpeed = maxSpeed;
-        } else if (newSpeed < -maxSpeed){
-            newSpeed = -maxSpeed;
+        float maxCheck;
+        if (walking){
+            maxCheck = walkSpeed;
+        } else {
+            maxCheck = maxSpeed;
+        }
+
+        if (newSpeed > maxCheck){
+            newSpeed = maxCheck;
+        } else if (newSpeed < -maxCheck){
+            newSpeed = -maxCheck;
         }
 
         rigi.velocity = new Vector2(newSpeed, rigi.velocity.y);
     }
 
-    private void SlowMovement(){
+    private void SlowMovement(){    //Dampen current horizontal movement
         float newSpeed = rigi.velocity.x;
 
         if (isGrounded){
@@ -231,5 +244,19 @@ public class PlayerController : MonoBehaviour
 
     public void Move(InputAction.CallbackContext context){
         currentMove = context.ReadValue<float>();
+    }
+
+    public void Walk(InputAction.CallbackContext context){
+        if (context.phase == InputActionPhase.Started){
+            walking = true;
+        } else if (context.phase == InputActionPhase.Canceled){
+            walking = false;
+        }
+    }
+
+    void OnTriggerEnter2D(Collider2D other){
+        if (other.gameObject.tag == "Death"){
+            Debug.Log("Die");
+        }
     }
 }
