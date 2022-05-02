@@ -37,6 +37,7 @@ public class PlayerController : MonoBehaviour
     private float wallJumpUpwardsForce = 27;
     private float wallJumpTimer = 0;
     private float wallJumpCount = .1f;
+    private LayerMask wallJumpLayerMask;
 
     //Fall
     private float maxVelocity = 35; //Prevent player from moving too quickly
@@ -50,7 +51,8 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         rigi = GetComponent<Rigidbody2D>();
-        groundLayerMask = LayerMask.GetMask("Ground");
+        groundLayerMask = LayerMask.GetMask("Ground") | LayerMask.GetMask("One-Way");
+        wallJumpLayerMask = LayerMask.GetMask("Ground");
         boxCollider = GetComponent<BoxCollider2D>();
         particles = GetComponent<ParticleSystem>();
     }
@@ -104,6 +106,7 @@ public class PlayerController : MonoBehaviour
             groundedTimer = 0;
         } else if (jumpStarting && (onLeftWall || onRightWall) && wallJumpTimer <= 0){
             ApplyWallJump();
+            jumpPressedTimer = 0;
         } else if (jumpEnding){
             if (rigi.velocity.y > 0){   //Don't apply jump reduction if apex of jump already hit
                 ApplyJump(rigi.velocity.y * jumpReleaseMult);
@@ -140,13 +143,17 @@ public class PlayerController : MonoBehaviour
         }
     }
     private bool CheckGrounded(){
-        RaycastHit2D raycastHit = Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, 0f, Vector2.down, groundedHeight, groundLayerMask);
+        if (rigi.velocity.y <= 0.1f && rigi.velocity.y > -.1f){  //Prevent rising grounded state through semi-solid platforms
+            RaycastHit2D raycastHit = Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, 0f, Vector2.down, groundedHeight, groundLayerMask);
 
-        return raycastHit.collider != null;
+            return raycastHit.collider != null;
+        } else {
+            return false;
+        }
     }
 
     private void CheckWalls(){
-        RaycastHit2D leftRaycastHit = Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, 0f, Vector2.left, groundedHeight, groundLayerMask);
+        RaycastHit2D leftRaycastHit = Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, 0f, Vector2.left, groundedHeight, wallJumpLayerMask);
 
         if (leftRaycastHit.collider != null){
             onLeftWall = true;
@@ -154,7 +161,7 @@ public class PlayerController : MonoBehaviour
             onLeftWall = false;
         }
 
-        RaycastHit2D rightRaycastHit = Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, 0f, Vector2.right, groundedHeight, groundLayerMask);
+        RaycastHit2D rightRaycastHit = Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, 0f, Vector2.right, groundedHeight, wallJumpLayerMask);
 
         if (rightRaycastHit.collider != null){
             onRightWall = true;
