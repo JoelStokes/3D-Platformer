@@ -44,12 +44,15 @@ public class PlayerController : MonoBehaviour
     //Components
     private Rigidbody2D rigi;
     private BoxCollider2D boxCollider;
+    private ParticleSystem particles;
+    private float particlePosition = .35f;
 
     void Start()
     {
         rigi = GetComponent<Rigidbody2D>();
         groundLayerMask = LayerMask.GetMask("Ground");
         boxCollider = GetComponent<BoxCollider2D>();
+        particles = GetComponent<ParticleSystem>();
     }
 
     void Update(){  //Handle Timers
@@ -111,11 +114,31 @@ public class PlayerController : MonoBehaviour
 
         if (onLeftWall || onRightWall){
             ApplyWallSlow();
+            if (rigi.velocity.y < 0){   //Only emit particles if sliding downwards
+                HandleParticles();
+            }
+        } else {
+            if (particles.isEmitting){
+                particles.Stop();
+            }
         }
 
         rigi.velocity = Vector2.ClampMagnitude(rigi.velocity, maxVelocity);
     }
 
+    private void HandleParticles(){
+        if (!particles.isEmitting){
+            ParticleSystem.ShapeModule shape = particles.shape;
+
+            if (onLeftWall){
+                shape.position = new Vector3(-particlePosition, 0, 0);
+            } else {
+                shape.position = new Vector3(particlePosition, 0, 0);
+            }
+
+            particles.Play();
+        }
+    }
     private bool CheckGrounded(){
         RaycastHit2D raycastHit = Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, 0f, Vector2.down, groundedHeight, groundLayerMask);
 
