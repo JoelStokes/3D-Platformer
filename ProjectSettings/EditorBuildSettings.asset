@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/VerticalClassic.unity
+    guid: 4e0d1a15e9e19e945b6a6086a0187fa9
   m_configObjects: {}
