@@ -319,17 +319,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 6700218189001852416, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
   m_PrefabInstance: {fileID: 6700218188997826241}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &29528261 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 29528263, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
-  m_PrefabInstance: {fileID: 6700218188997826241}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 29528257}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b84716ebf9188114f8f0c06f12ad92f4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1001 &29978217
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6913,6 +6902,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   FollowObj: {fileID: 29528257}
+  offset: {x: 0, y: 0}
+  lockX: 0
+  lockY: 0
 --- !u!61 &977018102 stripped
 BoxCollider2D:
   m_CorrespondingSourceObject: {fileID: 3660071595202121420, guid: e38bbe71bf5a77040804cdbb2afa3307, type: 3}
@@ -8952,6 +8944,7 @@ GameObject:
   - component: {fileID: 1197269719}
   - component: {fileID: 1197269721}
   - component: {fileID: 1197269722}
+  - component: {fileID: 1197269723}
   m_Layer: 0
   m_Name: SawbladeBig
   m_TagString: Death
@@ -9055,6 +9048,21 @@ CircleCollider2D:
   m_Offset: {x: 0, y: 0}
   serializedVersion: 2
   m_Radius: 1.5
+--- !u!114 &1197269723
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1197269718}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b34d97b65a94cea4e9b31f6ebf98a971, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  acceleration: 0.01
+  timeInterval: 0.5
+  timeIntervalAdd: 0.1
 --- !u!1001 &1199179237
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -18767,46 +18775,6 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: -2644353490448496372, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
-      propertyPath: m_ActionEvents.Array.size
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: -2644353490448496372, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
-      propertyPath: m_ActionEvents.Array.data[4].m_ActionId
-      value: 903a9aa9-6abb-48ef-8a58-3c59da3b55ec
-      objectReference: {fileID: 0}
-    - target: {fileID: -2644353490448496372, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
-      propertyPath: m_ActionEvents.Array.data[4].m_ActionName
-      value: Player/Walk[/XInputControllerWindows/rightTrigger,/XInputControllerWindows/leftTrigger,/XInputControllerWindows/rightShoulder,/XInputControllerWindows/leftShoulder,/Keyboard/shift,/Keyboard/ctrl]
-      objectReference: {fileID: 0}
-    - target: {fileID: -2644353490448496372, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
-      propertyPath: m_ActionEvents.Array.data[4].m_PersistentCalls.m_Calls.Array.size
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: -2644353490448496372, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
-      propertyPath: m_ActionEvents.Array.data[4].m_PersistentCalls.m_Calls.Array.data[0].m_Mode
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -2644353490448496372, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
-      propertyPath: m_ActionEvents.Array.data[4].m_PersistentCalls.m_Calls.Array.data[0].m_Target
-      value: 
-      objectReference: {fileID: 29528261}
-    - target: {fileID: -2644353490448496372, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
-      propertyPath: m_ActionEvents.Array.data[4].m_PersistentCalls.m_Calls.Array.data[0].m_CallState
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: -2644353490448496372, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
-      propertyPath: m_ActionEvents.Array.data[4].m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: Walk
-      objectReference: {fileID: 0}
-    - target: {fileID: -2644353490448496372, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
-      propertyPath: m_ActionEvents.Array.data[4].m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: PlayerController, Assembly-CSharp
-      objectReference: {fileID: 0}
-    - target: {fileID: -2644353490448496372, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
-      propertyPath: m_ActionEvents.Array.data[4].m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
-      value: UnityEngine.Object, UnityEngine
-      objectReference: {fileID: 0}
     - target: {fileID: 6700218189001852416, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
       propertyPath: m_Name
       value: Player
@@ -18817,11 +18785,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6700218189001852421, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -28
       objectReference: {fileID: 0}
     - target: {fileID: 6700218189001852421, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 6700218189001852421, guid: 40911a1a81cffa34a97ad5148dc96e56, type: 3}
       propertyPath: m_LocalPosition.z

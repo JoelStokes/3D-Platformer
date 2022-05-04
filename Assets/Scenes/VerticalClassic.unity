@@ -396,7 +396,7 @@ MonoBehaviour:
   LevelObjects: []
   reshuffleRate: 20
   Camera: {fileID: 149895946}
-  prePlaceCount: 10
+  prePlaceCount: 12
 --- !u!4 &469564392
 Transform:
   m_ObjectHideFlags: 0
