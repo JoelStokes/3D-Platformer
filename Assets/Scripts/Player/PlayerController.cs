@@ -54,7 +54,7 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D rigi;
     private BoxCollider2D boxCollider;
     private ParticleSystem particles;
-    private float particlePosition = .35f;
+    private float particlePosition = .55f;
 
     void Start()
     {
@@ -273,6 +273,13 @@ public class PlayerController : MonoBehaviour
             walking = true;
         } else if (context.phase == InputActionPhase.Canceled){
             walking = false;
+        }
+    }
+
+    //TEMPORARY CLOSE FOR ALPHA PHYSICS TEST!!! Change to Pause Menu later
+    public void Pause(InputAction.CallbackContext context){
+        if (context.phase == InputActionPhase.Started){
+            Application.Quit();
         }
     }
 

@@ -46,6 +46,12 @@ TagManager:
   - name: Ground
     uniqueID: 556391563
     locked: 0
+  - name: Wheel
+    uniqueID: 285462537
+    locked: 0
   - name: Player
     uniqueID: 538501885
+    locked: 0
+  - name: Loading
+    uniqueID: 3084217371
     locked: 0

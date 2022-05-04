@@ -43,14 +43,15 @@ public class ClassicGen : MonoBehaviour
     {
         CollectLevelObjects();
         CollectChunkData();
-        AddMirrorPaths();
-        ShufflePaths();
+        StartCoroutine(AddMirrorPaths());   //Instantiation of mirror objects can be slow
+        StartCoroutine(ShufflePaths());
         GenerateStarter();
 
         for(int i=0; i<prePlaceCount; i++){
             StartCoroutine(PlaceLevelTile());
         }
 
+        StartCoroutine(CloseLoadAnim(2f));
         setupComplete = true;
     }
 
@@ -92,11 +93,14 @@ public class ClassicGen : MonoBehaviour
         }
     }
 
-    private void AddMirrorPaths(){
+    IEnumerator AddMirrorPaths(){
         int initialPaths = LevelPaths.Count;
         for (int i=0; i<initialPaths; i++){
             LevelPaths.Add(GetMirrorPath(LevelPaths[i]));
+            yield return 0;
         }
+
+        yield return null;
     }
 
     private ClassicPath GetMirrorPath(ClassicPath path){    //Return coordinates of Mirrored Level
@@ -119,17 +123,17 @@ public class ClassicGen : MonoBehaviour
         return mirroredPath;
     }
 
-    private void ShufflePaths(){    //******CAUSING ERROR! Needs further research
-        //LevelPaths = LevelPaths.OrderBy(i => Guid.NewGuid()).ToList();
-
-        //Could have array of GameObjects, delete when under camera?
-
+    IEnumerator ShufflePaths(){
         for (int i = 0; i < LevelPaths.Count; i++) {
             ClassicPath temp = LevelPaths[i];
             int randomIndex = Random.Range(i, LevelPaths.Count);
             LevelPaths[i] = LevelPaths[randomIndex];
             LevelPaths[randomIndex] = temp;
+
+            yield return 0;
         }
+
+        yield return null;
     }
 
     private void GenerateStarter(){
@@ -215,29 +219,15 @@ public class ClassicGen : MonoBehaviour
         settingPiece = true;
 
         matchingPath = -1;  //Search for path that connects to previous, generate, add height, repeat till gen amount hit
-        //pathCount = 0;
 
         for (int i=0; i<LevelPaths.Count; i++){
             if (LevelPaths[i].startMin.x <= prevMin.x+1 && LevelPaths[i].startMax.x >= prevMax.x-1){
                 matchingPath = i;
                 break;
             }
+            
+            yield return 0;
         }
-
-        /*do{
-            Debug.Log(pathCount + " - startMin: " + LevelPaths[pathCount].startMin.x + ", startMax: " + LevelPaths[pathCount].startMax.x);
-            if (LevelPaths[pathCount].startMin.x <= prevMin.x+1 && LevelPaths[pathCount].startMax.x >= prevMax.x-1){
-                matchingPath = pathCount;
-            }
-
-            pathCount++;
-            if (pathCount >= LevelPaths.Count-1){
-                Debug.Log("ERROR! No matches found. Performed " + (pathCount+1) + " searches.");
-                matchingPath = 0;
-            }
-
-            yield return 0;  //Return to loop later to prevent lag
-        } while (matchingPath == -1);*/
 
         LevelObjects[LevelPaths[matchingPath].objNumber].transform.position = new Vector3(0, currentHeight, 0);
 
@@ -250,14 +240,16 @@ public class ClassicGen : MonoBehaviour
         LevelPaths.RemoveAt(matchingPath);
         LevelPaths.Add(pathShuffle);
 
-        /*if (genCount >= reshuffleRate || genCount >= LevelPaths.Count){
-            ShufflePaths();
-            genCount = 0;
-        } else {
-            genCount++;
-        }*/ //Only shuffling at start now
-
         settingPiece = false;
         yield return null;
+    }
+
+    IEnumerator CloseLoadAnim(float time){
+        yield return new WaitForSeconds(time);
+
+        GameObject LoadHandler = GameObject.Find("Load Handler");
+        if (LoadHandler){
+            LoadHandler.GetComponent<Loading>().LoadFinished();    
+        }
     }
 }

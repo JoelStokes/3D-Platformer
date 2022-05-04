@@ -4,23 +4,19 @@ using UnityEngine;
 
 public class DeathWheel : MonoBehaviour
 {
-    public float acceleration = .0001f;
-    public float timeInterval = .5f;
-    public float timeIntervalAdd = .5f;
+    public float acceleration;
+    public float timeInterval;
+    public float timeIntervalAdd;
     private float speed = 0;
     private float maxSpeed = 10;
     private float speedTimer = 0;
-
-    private float moveTimer = 0;
-    private float moveCounter = .017f;  //60fps move
 
     // Update is called once per frame
     void Update()
     {
         speedTimer += Time.deltaTime;
-        moveTimer += Time.deltaTime;
 
-        if (speedTimer > timeInterval){
+        if (speedTimer >= timeInterval && speed < maxSpeed){
             speed += acceleration;
             
             speedTimer = 0;
@@ -28,9 +24,6 @@ public class DeathWheel : MonoBehaviour
             timeInterval += timeIntervalAdd;
         }
 
-        if (moveTimer > moveCounter){
-            transform.position = new Vector3(transform.position.x, transform.position.y + speed, transform.position.z);
-            moveTimer = 0;
-        }
+        transform.position = new Vector3(transform.position.x, transform.position.y + (speed * Time.deltaTime), transform.position.z);
     }
 }
