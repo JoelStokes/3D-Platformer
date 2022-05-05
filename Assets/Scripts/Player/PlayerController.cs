@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
@@ -21,6 +22,7 @@ public class PlayerController : MonoBehaviour
     private float dampingGround = .8f;
     private float dampingAir = .9f;
     private float dampingTurn = .7f;
+    private float dampingTurnAir = .75f;
 
     //Ground Checks
     private bool isGrounded = false;
@@ -38,6 +40,13 @@ public class PlayerController : MonoBehaviour
     private float wallJumpTimer = 0;
     private float wallJumpCount = .1f;
     private LayerMask wallJumpLayerMask;
+    private float wallSlideLeftTimer = 0;
+    private float wallSlideRightTimer = 0;
+    private float wallSlideCount = .15f;
+
+    //Walk
+    private float walkSpeed;    //Set in start, MaxSpeed / 2
+    private bool walking = false;
 
     //Fall
     private float maxVelocity = 35; //Prevent player from moving too quickly
@@ -46,7 +55,7 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D rigi;
     private BoxCollider2D boxCollider;
     private ParticleSystem particles;
-    private float particlePosition = .35f;
+    private float particlePosition = .55f;
 
     void Start()
     {
@@ -55,6 +64,8 @@ public class PlayerController : MonoBehaviour
         wallJumpLayerMask = LayerMask.GetMask("Ground");
         boxCollider = GetComponent<BoxCollider2D>();
         particles = GetComponent<ParticleSystem>();
+
+        walkSpeed = maxSpeed / 2;
     }
 
     void Update(){  //Handle Timers
@@ -72,6 +83,14 @@ public class PlayerController : MonoBehaviour
 
         if (wallJumpTimer > 0){     //Walljump prevents turning around to reach same wall & mashing to double wall jump
             wallJumpTimer -= Time.deltaTime;
+        }
+
+        if (wallSlideLeftTimer > 0){
+            wallSlideLeftTimer -= Time.deltaTime;
+        }
+
+        if (wallSlideRightTimer > 0){
+            wallSlideRightTimer -= Time.deltaTime;
         }
     }
 
@@ -104,7 +123,7 @@ public class PlayerController : MonoBehaviour
             jumpStarting = false;
             jumpPressedTimer = 0;
             groundedTimer = 0;
-        } else if (jumpStarting && (onLeftWall || onRightWall) && wallJumpTimer <= 0){
+        } else if (jumpStarting && ((onLeftWall || onRightWall) || (wallSlideLeftTimer > 0 || wallSlideRightTimer > 0)) && wallJumpTimer <= 0){
             ApplyWallJump();
             jumpPressedTimer = 0;
         } else if (jumpEnding){
@@ -126,7 +145,7 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        rigi.velocity = Vector2.ClampMagnitude(rigi.velocity, maxVelocity);
+        rigi.velocity = Vector2.ClampMagnitude(rigi.velocity, maxVelocity); //Prevent falling too fast, avoid clipping through walls
     }
 
     private void HandleParticles(){
@@ -134,9 +153,9 @@ public class PlayerController : MonoBehaviour
             ParticleSystem.ShapeModule shape = particles.shape;
 
             if (onLeftWall){
-                shape.position = new Vector3(-particlePosition, 0, 0);
+                shape.position = new Vector3(-particlePosition, 0, -1);
             } else {
-                shape.position = new Vector3(particlePosition, 0, 0);
+                shape.position = new Vector3(particlePosition, 0, -1);
             }
 
             particles.Play();
@@ -155,39 +174,54 @@ public class PlayerController : MonoBehaviour
     private void CheckWalls(){
         RaycastHit2D leftRaycastHit = Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, 0f, Vector2.left, groundedHeight, wallJumpLayerMask);
 
-        if (leftRaycastHit.collider != null){
+        if (leftRaycastHit.collider != null && currentMove < -deadZone){
             onLeftWall = true;
         } else {
+            if (onLeftWall){    //Was previously in wall slide, give grace period
+                wallSlideLeftTimer = wallSlideCount;
+            }
             onLeftWall = false;
         }
 
         RaycastHit2D rightRaycastHit = Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, 0f, Vector2.right, groundedHeight, wallJumpLayerMask);
 
-        if (rightRaycastHit.collider != null){
+        if (rightRaycastHit.collider != null && currentMove > deadZone){
             onRightWall = true;
         } else {
+            if (onRightWall){
+                wallSlideRightTimer = wallSlideCount;
+            }
             onRightWall = false;
         }
     }
 
     private void ApplyMove(float value){
         float dampenedVelocity = rigi.velocity.x;
-        if (isGrounded && (rigi.velocity.x > 0 && value < 0) || (rigi.velocity.x < 0 && value > 0)){  //Check if turning
+        if (isGrounded && ((rigi.velocity.x > 0 && value < 0) || (rigi.velocity.x < 0 && value > 0))){  //Used to only apply to isGrounded turning, but feels better jumping like this
             dampenedVelocity *= dampingTurn;
+        } else if ((rigi.velocity.x > 0 && value < 0) || (rigi.velocity.x < 0 && value > 0)){
+            dampenedVelocity *= dampingTurnAir;
         }
 
         float newSpeed = ((value * accelerationSpeed) + dampenedVelocity);
 
-        if (newSpeed > maxSpeed){
-            newSpeed = maxSpeed;
-        } else if (newSpeed < -maxSpeed){
-            newSpeed = -maxSpeed;
+        float maxCheck;
+        if (walking){
+            maxCheck = walkSpeed;
+        } else {
+            maxCheck = maxSpeed;
+        }
+
+        if (newSpeed > maxCheck){
+            newSpeed = maxCheck;
+        } else if (newSpeed < -maxCheck){
+            newSpeed = -maxCheck;
         }
 
         rigi.velocity = new Vector2(newSpeed, rigi.velocity.y);
     }
 
-    private void SlowMovement(){
+    private void SlowMovement(){    //Dampen current horizontal movement
         float newSpeed = rigi.velocity.x;
 
         if (isGrounded){
@@ -203,15 +237,17 @@ public class PlayerController : MonoBehaviour
     }
 
     private void ApplyWallJump(){
-        if (onLeftWall){
+        if (onLeftWall || wallSlideLeftTimer > 0){
             rigi.velocity = new Vector2(wallJumpOutwardsForce, wallJumpUpwardsForce);
-        } else if (onRightWall){
+        } else if (onRightWall || wallSlideRightTimer > 0){
             rigi.velocity = new Vector2(-wallJumpOutwardsForce, wallJumpUpwardsForce);
         }
 
         onLeftWall = false;
         onRightWall = false;
         wallJumpTimer = wallJumpCount;
+        wallSlideLeftTimer = 0;
+        wallSlideRightTimer = 0;
     }
 
     private void ApplyWallSlow(){
@@ -231,5 +267,26 @@ public class PlayerController : MonoBehaviour
 
     public void Move(InputAction.CallbackContext context){
         currentMove = context.ReadValue<float>();
+    }
+
+    public void Walk(InputAction.CallbackContext context){
+        if (context.phase == InputActionPhase.Started){
+            walking = true;
+        } else if (context.phase == InputActionPhase.Canceled){
+            walking = false;
+        }
+    }
+
+    //TEMPORARY CLOSE FOR ALPHA PHYSICS TEST!!! Change to Pause Menu later
+    public void Pause(InputAction.CallbackContext context){
+        if (context.phase == InputActionPhase.Started){
+            Application.Quit();
+        }
+    }
+
+    void OnTriggerEnter2D(Collider2D other){
+        if (other.gameObject.tag == "Death"){
+            SceneManager.LoadScene("AlphaStart");
+        }
     }
 }
