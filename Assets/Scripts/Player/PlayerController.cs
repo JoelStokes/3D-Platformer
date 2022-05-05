@@ -287,6 +287,8 @@ public class PlayerController : MonoBehaviour
     void OnTriggerEnter2D(Collider2D other){
         if (other.gameObject.tag == "Death"){
             SceneManager.LoadScene("AlphaStart");
+        } else if (other.gameObject.tag == "Switch"){
+            other.gameObject.GetComponent<SwitchButton>().ActivateSwitch();
         }
     }
 }
