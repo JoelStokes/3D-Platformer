@@ -8,7 +8,7 @@ public class DeathWheel : MonoBehaviour
     public float timeInterval;
     public float timeIntervalAdd;
     private float speed = 0;
-    private float maxSpeed = 10;
+    private float maxSpeed = 12;
     private float speedTimer = 0;
 
     // Update is called once per frame

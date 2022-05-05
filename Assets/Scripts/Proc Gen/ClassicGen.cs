@@ -25,7 +25,7 @@ public class ClassicGen : MonoBehaviour
     private List<ClassicPath> LevelPaths = new List<ClassicPath>();
 
     //private int genCount = 0;
-    public int reshuffleRate = 0;   //How soon in generation count to re-shuffle level paths. If too big, will reshuffle when full paths list finished
+    //public int reshuffleRate = 0;   //How soon in generation count to re-shuffle level paths. If too big, will reshuffle when full paths list finished
     private float currentHeight = 0;
     private Vector2 prevMin;
     private Vector2 prevMax;
@@ -44,20 +44,12 @@ public class ClassicGen : MonoBehaviour
         CollectLevelObjects();
         CollectChunkData();
         StartCoroutine(AddMirrorPaths());   //Instantiation of mirror objects can be slow
-        StartCoroutine(ShufflePaths());
         GenerateStarter();
-
-        for(int i=0; i<prePlaceCount; i++){
-            StartCoroutine(PlaceLevelTile());
-        }
-
-        StartCoroutine(CloseLoadAnim(2f));
-        setupComplete = true;
     }
 
     void Update(){  //Continuously check & move level chunks depending on Camera position
         if (Camera.transform.position.y + genDistance >= currentHeight && !settingPiece && setupComplete){
-            StartCoroutine(PlaceLevelTile());
+            PlaceLevelTile();
         }
     }
 
@@ -100,6 +92,8 @@ public class ClassicGen : MonoBehaviour
             yield return 0;
         }
 
+        StartCoroutine(ShufflePaths());
+
         yield return null;
     }
 
@@ -114,7 +108,8 @@ public class ClassicGen : MonoBehaviour
         mirroredPath.endMax = new Vector2(-path.endMin.x, path.endMin.y);
 
         //This may introduce lag
-        GameObject mirrorObj = GameObject.Instantiate(LevelObjects[path.objNumber], LevelObjectsParent.transform.position, Quaternion.identity);
+        GameObject mirrorObj = GameObject.Instantiate(LevelObjects[path.objNumber], 
+            new Vector3(LevelObjectsParent.transform.position.x * 2, path.objNumber*20, LevelObjectsParent.transform.position.z), Quaternion.identity);
         mirrorObj.transform.localScale = new Vector3(-1,1,1);
         LevelObjects.Add(mirrorObj);
             
@@ -132,6 +127,15 @@ public class ClassicGen : MonoBehaviour
 
             yield return 0;
         }
+
+        //Ensure that all pieces finished shuffling before placing
+        for(int i=0; i<prePlaceCount; i++){
+            PlaceLevelTile();
+            yield return 0;
+        }
+
+        StartCoroutine(CloseLoadAnim(.5f));
+        setupComplete = true;
 
         yield return null;
     }
@@ -215,7 +219,7 @@ public class ClassicGen : MonoBehaviour
         yield return null;
     }*/
 
-    IEnumerator PlaceLevelTile(){
+    private void PlaceLevelTile(){
         settingPiece = true;
 
         matchingPath = -1;  //Search for path that connects to previous, generate, add height, repeat till gen amount hit
@@ -225,8 +229,6 @@ public class ClassicGen : MonoBehaviour
                 matchingPath = i;
                 break;
             }
-            
-            yield return 0;
         }
 
         LevelObjects[LevelPaths[matchingPath].objNumber].transform.position = new Vector3(0, currentHeight, 0);
@@ -234,14 +236,13 @@ public class ClassicGen : MonoBehaviour
         prevMin = LevelPaths[matchingPath].endMin;
         prevMax = LevelPaths[matchingPath].endMax;
 
-        currentHeight += prevMin.y + 1;
+        currentHeight += (prevMin.y - LevelPaths[matchingPath].startMin.y) + 1;
 
         ClassicPath pathShuffle = LevelPaths[matchingPath];
         LevelPaths.RemoveAt(matchingPath);
         LevelPaths.Add(pathShuffle);
 
         settingPiece = false;
-        yield return null;
     }
 
     IEnumerator CloseLoadAnim(float time){
