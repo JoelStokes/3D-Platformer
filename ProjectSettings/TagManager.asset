@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Ground
   - Death
+  - Switch
   layers:
   - Default
   - TransparentFX
@@ -45,6 +46,9 @@ TagManager:
     locked: 0
   - name: Ground
     uniqueID: 556391563
+    locked: 0
+  - name: Sprite
+    uniqueID: 490769183
     locked: 0
   - name: Wheel
     uniqueID: 285462537
