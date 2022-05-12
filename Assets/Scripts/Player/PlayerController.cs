@@ -51,6 +51,11 @@ public class PlayerController : MonoBehaviour
     //Fall
     private float maxVelocity = 35; //Prevent player from moving too quickly
 
+    //Spring
+    private bool springJump = false;    //used to prevent jump release for quicker descent (fixed spring jump height)
+    private float springTimer = 0;
+    private float springCount = .25f;
+
     //Components
     private Rigidbody2D rigi;
     private BoxCollider2D boxCollider;
@@ -92,6 +97,10 @@ public class PlayerController : MonoBehaviour
         if (wallSlideRightTimer > 0){
             wallSlideRightTimer -= Time.deltaTime;
         }
+
+        if (springTimer > 0){
+            springTimer -= Time.deltaTime;
+        }
     }
 
     void FixedUpdate()
@@ -99,6 +108,7 @@ public class PlayerController : MonoBehaviour
         if (CheckGrounded()){   //Set Grounded
             groundedTimer = groundedCount;
             isGrounded = true;
+            springJump = false;
         }
 
         if (!isGrounded){   //Set Walls
@@ -108,7 +118,7 @@ public class PlayerController : MonoBehaviour
             onRightWall = false;
         }
 
-        if (wallJumpTimer <= 0){     //Move
+        if (wallJumpTimer <= 0 && springTimer <= 0){     //Move
             if (currentMove > deadZone){
                 ApplyMove(1);
             } else if (currentMove < -deadZone){
@@ -118,15 +128,15 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        if (jumpStarting && isGrounded){    //Jump
+        if (jumpStarting && isGrounded && springTimer <= 0){    //Jump
             ApplyJump(jumpStartForce);
             jumpStarting = false;
             jumpPressedTimer = 0;
             groundedTimer = 0;
-        } else if (jumpStarting && ((onLeftWall || onRightWall) || (wallSlideLeftTimer > 0 || wallSlideRightTimer > 0)) && wallJumpTimer <= 0){
+        } else if (jumpStarting && ((onLeftWall || onRightWall) || (wallSlideLeftTimer > 0 || wallSlideRightTimer > 0)) && wallJumpTimer <= 0 && springTimer <= 0){
             ApplyWallJump();
             jumpPressedTimer = 0;
-        } else if (jumpEnding){
+        } else if (jumpEnding && !springJump){
             if (rigi.velocity.y > 0){   //Don't apply jump reduction if apex of jump already hit
                 ApplyJump(rigi.velocity.y * jumpReleaseMult);
             }
@@ -145,7 +155,9 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        rigi.velocity = Vector2.ClampMagnitude(rigi.velocity, maxVelocity); //Prevent falling too fast, avoid clipping through walls
+        if (springTimer <= 0){
+            rigi.velocity = Vector2.ClampMagnitude(rigi.velocity, maxVelocity); //Prevent falling too fast, avoid clipping through walls
+        }
     }
 
     private void HandleParticles(){
@@ -248,6 +260,7 @@ public class PlayerController : MonoBehaviour
         wallJumpTimer = wallJumpCount;
         wallSlideLeftTimer = 0;
         wallSlideRightTimer = 0;
+        springJump = false;
     }
 
     private void ApplyWallSlow(){
@@ -289,6 +302,11 @@ public class PlayerController : MonoBehaviour
             SceneManager.LoadScene("AlphaStart");
         } else if (other.gameObject.tag == "Switch"){
             other.gameObject.GetComponent<SwitchButton>().ActivateSwitch();
+        } else if (other.gameObject.tag == "Spring"){
+            springTimer = springCount;
+            springJump = true;
+
+            other.gameObject.GetComponent<Spring>().ApplyForce(rigi);
         }
     }
 }
