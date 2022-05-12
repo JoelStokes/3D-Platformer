@@ -6,6 +6,7 @@ public class SwitchButton : MonoBehaviour
 {
     public Animator[] moveAnims;
     public Animator switchAnim;
+    public Animator[] gearAnims;
 
     // Update is called once per frame
     void Update()
@@ -14,10 +15,16 @@ public class SwitchButton : MonoBehaviour
     }
 
     public void ActivateSwitch(){
-        switchAnim.SetTrigger("Press");
+        switchAnim.SetTrigger("Activate");
 
         foreach (Animator anim in moveAnims){
-            anim.SetTrigger("In");
+            anim.SetTrigger("Activate");
+        }
+
+        if (gearAnims != null && gearAnims.Length != 0){
+            foreach (Animator anim in gearAnims){
+                anim.SetTrigger("Activate");
+            }
         }
     }
 
@@ -26,6 +33,12 @@ public class SwitchButton : MonoBehaviour
 
         foreach (Animator anim in moveAnims){
             anim.SetTrigger("Reset");
+        }
+
+        if (gearAnims != null && gearAnims.Length == 0){
+            foreach (Animator anim in gearAnims){
+                anim.SetTrigger("Reset");
+            }
         }
     }
 }
