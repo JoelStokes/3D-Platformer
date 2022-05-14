@@ -62,6 +62,11 @@ public class PlayerController : MonoBehaviour
     private float hurtCurve = 0;
     private Vector2 hurtPos;  //3 locations on hurt Bezier Curve
     private float hurtHeight = 10f;
+    private bool hurtRight = false;
+    private float stunTimer = 0;
+    private float stunCount = .25f;
+    private float hurtForceUp = 8;
+    private float hurtForceBack = 2.5f;
 
     //Components
     private Rigidbody2D rigi;
@@ -109,19 +114,30 @@ public class PlayerController : MonoBehaviour
             springTimer -= Time.deltaTime;
         }
 
+        if (stunTimer > 0){
+            stunTimer -= Time.deltaTime;
+        }
+
         if (hurt){
             if (hurtCurve < 1){
                 ApplyHurtCurve();
             } else {
                 hurt = false;
-                rigi.velocity = new Vector2(0,0);
+
+                if (hurtRight){
+                    rigi.velocity = new Vector2(hurtForceBack, hurtForceUp);
+                } else {
+                    rigi.velocity = new Vector2(-hurtForceBack, hurtForceUp);
+                }
+
+                stunTimer = stunCount;
             }
         }
     }
 
     void FixedUpdate()
     {
-        if (!hurt){
+        if (!hurt && stunTimer <= 0){
             if (CheckGrounded()){   //Set Grounded
                 groundedTimer = groundedCount;
                 isGrounded = true;
@@ -334,7 +350,7 @@ public class PlayerController : MonoBehaviour
     }
 
     void OnTriggerEnter2D(Collider2D other){
-        if (!hurt){
+        if (!hurt && stunTimer <= 0){
             if (other.gameObject.tag == "Death"){
                 SceneManager.LoadScene("AlphaStart");
             } else if (other.gameObject.tag == "Switch"){
@@ -348,7 +364,22 @@ public class PlayerController : MonoBehaviour
                 hurt = true;
                 hurtCurve = 0;
 
-                hurtPos = new Vector2(transform.position.x, transform.position.y); 
+                onLeftWall = false;
+                onRightWall = false;
+                if (particles.isEmitting){
+                    particles.Stop();
+                }
+
+                hurtPos = new Vector2(transform.position.x, transform.position.y);
+
+                //if (hurtPos.x < groundPos.x + .5f && hurtPos.x > groundPos.x - .5f)
+                //Add extra buffer if hurt & grounded spots are very close?
+
+                if (groundPos.x > hurtPos.x){
+                    hurtRight = true;
+                } else {
+                    hurtRight = false;
+                }
             }
         }
     }
