@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 public class PlayerController : MonoBehaviour
 {
     //Jump
-    private float jumpStartForce = 31;
+    private float jumpStartForce = 30;
     private float jumpReleaseMult = .5f;
     private bool jumpStarting = false;
     private bool jumpEnding = false;
@@ -30,13 +30,14 @@ public class PlayerController : MonoBehaviour
     private float groundedHeight = .1f;
     private float groundedTimer = 0;
     private float groundedCount =.1f;
+    private Vector2 groundPos;
 
     //Walljump
     private bool onLeftWall = false;
     private bool onRightWall = false;
     private float wallSlowMax = 5;   //Only applied moving downwards
-    private float wallJumpOutwardsForce = 15;
-    private float wallJumpUpwardsForce = 27;
+    private float wallJumpOutwardsForce = 14;
+    private float wallJumpUpwardsForce = 25;
     private float wallJumpTimer = 0;
     private float wallJumpCount = .1f;
     private LayerMask wallJumpLayerMask;
@@ -56,11 +57,23 @@ public class PlayerController : MonoBehaviour
     private float springTimer = 0;
     private float springCount = .25f;
 
+    //Stun Mode (Hurt Knockback)
+    private bool hurt = false;
+    private float hurtCurve = 0;
+    private Vector2 hurtPos;  //3 locations on hurt Bezier Curve
+    private float hurtHeight = 10f;
+    private bool hurtRight = false;
+    private float stunTimer = 0;
+    private float stunCount = .25f;
+    private float hurtForceUp = 8;
+    private float hurtForceBack = 2.5f;
+
     //Components
     private Rigidbody2D rigi;
     private BoxCollider2D boxCollider;
     private ParticleSystem particles;
     private float particlePosition = .55f;
+    private TrailRenderer trail;
 
     void Start()
     {
@@ -69,6 +82,7 @@ public class PlayerController : MonoBehaviour
         wallJumpLayerMask = LayerMask.GetMask("Ground");
         boxCollider = GetComponent<BoxCollider2D>();
         particles = GetComponent<ParticleSystem>();
+        trail = GetComponent<TrailRenderer>();
 
         walkSpeed = maxSpeed / 2;
     }
@@ -101,62 +115,86 @@ public class PlayerController : MonoBehaviour
         if (springTimer > 0){
             springTimer -= Time.deltaTime;
         }
+
+        if (stunTimer > 0){
+            stunTimer -= Time.deltaTime;
+        }
+
+        if (hurt){
+            if (hurtCurve < 1){
+                ApplyHurtCurve();
+            } else {
+                hurt = false;
+                trail.emitting = true;
+
+                if (hurtRight){
+                    rigi.velocity = new Vector2(hurtForceBack, hurtForceUp);
+                } else {
+                    rigi.velocity = new Vector2(-hurtForceBack, hurtForceUp);
+                }
+
+                stunTimer = stunCount;
+            }
+        }
     }
 
     void FixedUpdate()
     {
-        if (CheckGrounded()){   //Set Grounded
-            groundedTimer = groundedCount;
-            isGrounded = true;
-            springJump = false;
-        }
+        if (!hurt && stunTimer <= 0){
+            if (CheckGrounded()){   //Set Grounded
+                groundedTimer = groundedCount;
+                isGrounded = true;
+                springJump = false;
+                groundPos = new Vector2(transform.position.x, transform.position.y);
+            }
 
-        if (!isGrounded){   //Set Walls
-            CheckWalls();
-        } else {
-            onLeftWall = false;
-            onRightWall = false;
-        }
-
-        if (wallJumpTimer <= 0 && springTimer <= 0){     //Move
-            if (currentMove > deadZone){
-                ApplyMove(1);
-            } else if (currentMove < -deadZone){
-                ApplyMove(-1);
+            if (!isGrounded){   //Set Walls
+                CheckWalls();
             } else {
-                SlowMovement();
+                onLeftWall = false;
+                onRightWall = false;
             }
-        }
 
-        if (jumpStarting && isGrounded && springTimer <= 0){    //Jump
-            ApplyJump(jumpStartForce);
-            jumpStarting = false;
-            jumpPressedTimer = 0;
-            groundedTimer = 0;
-        } else if (jumpStarting && ((onLeftWall || onRightWall) || (wallSlideLeftTimer > 0 || wallSlideRightTimer > 0)) && wallJumpTimer <= 0 && springTimer <= 0){
-            ApplyWallJump();
-            jumpPressedTimer = 0;
-        } else if (jumpEnding && !springJump){
-            if (rigi.velocity.y > 0){   //Don't apply jump reduction if apex of jump already hit
-                ApplyJump(rigi.velocity.y * jumpReleaseMult);
+            if (wallJumpTimer <= 0 && springTimer <= 0){     //Move
+                if (currentMove > deadZone){
+                    ApplyMove(1);
+                } else if (currentMove < -deadZone){
+                    ApplyMove(-1);
+                } else {
+                    SlowMovement();
+                }
             }
-            
-            jumpEnding = false;
-        }
 
-        if (onLeftWall || onRightWall){
-            ApplyWallSlow();
-            if (rigi.velocity.y < 0){   //Only emit particles if sliding downwards
-                HandleParticles();
+            if (jumpStarting && isGrounded && springTimer <= 0){    //Jump
+                ApplyJump(jumpStartForce);
+                jumpStarting = false;
+                jumpPressedTimer = 0;
+                groundedTimer = 0;
+            } else if (jumpStarting && ((onLeftWall || onRightWall) || (wallSlideLeftTimer > 0 || wallSlideRightTimer > 0)) && wallJumpTimer <= 0 && springTimer <= 0){
+                ApplyWallJump();
+                jumpPressedTimer = 0;
+            } else if (jumpEnding && !springJump){
+                if (rigi.velocity.y > 0){   //Don't apply jump reduction if apex of jump already hit
+                    ApplyJump(rigi.velocity.y * jumpReleaseMult);
+                }
+                
+                jumpEnding = false;
             }
-        } else {
-            if (particles.isEmitting){
-                particles.Stop();
-            }
-        }
 
-        if (springTimer <= 0){
-            rigi.velocity = Vector2.ClampMagnitude(rigi.velocity, maxVelocity); //Prevent falling too fast, avoid clipping through walls
+            if (onLeftWall || onRightWall){
+                ApplyWallSlow();
+                if (rigi.velocity.y < 0){   //Only emit particles if sliding downwards
+                    HandleParticles();
+                }
+            } else {
+                if (particles.isEmitting){
+                    particles.Stop();
+                }
+            }
+
+            if (springTimer <= 0){
+                rigi.velocity = Vector2.ClampMagnitude(rigi.velocity, maxVelocity); //Prevent falling too fast, avoid clipping through walls
+            }
         }
     }
 
@@ -176,7 +214,7 @@ public class PlayerController : MonoBehaviour
     private bool CheckGrounded(){
         if (rigi.velocity.y <= 0.1f && rigi.velocity.y > -.1f){  //Prevent rising grounded state through semi-solid platforms
             RaycastHit2D raycastHit = Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, 0f, Vector2.down, groundedHeight, groundLayerMask);
-
+            
             return raycastHit.collider != null;
         } else {
             return false;
@@ -290,6 +328,23 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private void ApplyHurtCurve(){
+        hurtCurve += 1.0f *Time.deltaTime;
+
+        Vector2 midPos = new Vector2((groundPos.x + hurtPos.x)/2, 0);
+        if (groundPos.y > hurtPos.y){
+            midPos.y = groundPos.y + hurtHeight;
+        } else {
+            midPos.y = hurtPos.y + hurtHeight;
+        }
+
+        Vector2 m1 = Vector2.Lerp(hurtPos, midPos, hurtCurve);
+        Vector2 m2 = Vector2.Lerp(midPos, groundPos, hurtCurve);
+        Vector2 updatePos = Vector2.Lerp(m1, m2, hurtCurve);
+
+        transform.position = new Vector3(updatePos.x, updatePos.y, transform.position.z);
+    }
+
     //TEMPORARY CLOSE FOR ALPHA PHYSICS TEST!!! Change to Pause Menu later
     public void Pause(InputAction.CallbackContext context){
         if (context.phase == InputActionPhase.Started){
@@ -298,15 +353,38 @@ public class PlayerController : MonoBehaviour
     }
 
     void OnTriggerEnter2D(Collider2D other){
-        if (other.gameObject.tag == "Death"){
-            SceneManager.LoadScene("AlphaStart");
-        } else if (other.gameObject.tag == "Switch"){
-            other.gameObject.GetComponent<SwitchButton>().ActivateSwitch();
-        } else if (other.gameObject.tag == "Spring"){
-            springTimer = springCount;
-            springJump = true;
+        if (!hurt && stunTimer <= 0){
+            if (other.gameObject.tag == "Death"){
+                SceneManager.LoadScene("AlphaStart");
+            } else if (other.gameObject.tag == "Switch"){
+                other.gameObject.GetComponent<SwitchButton>().ActivateSwitch();
+            } else if (other.gameObject.tag == "Spring"){
+                springTimer = springCount;
+                springJump = true;
 
-            other.gameObject.GetComponent<Spring>().ApplyForce(rigi);
+                other.gameObject.GetComponent<Spring>().ApplyForce(rigi);
+            } else if (other.gameObject.tag == "Hurt"){
+                hurt = true;
+                hurtCurve = 0;
+                trail.emitting = false;
+
+                onLeftWall = false;
+                onRightWall = false;
+                if (particles.isEmitting){
+                    particles.Stop();
+                }
+
+                hurtPos = new Vector2(transform.position.x, transform.position.y);
+
+                //if (hurtPos.x < groundPos.x + .5f && hurtPos.x > groundPos.x - .5f)
+                //Add extra buffer if hurt & grounded spots are very close?
+
+                if (groundPos.x > hurtPos.x){
+                    hurtRight = true;
+                } else {
+                    hurtRight = false;
+                }
+            }
         }
     }
 }

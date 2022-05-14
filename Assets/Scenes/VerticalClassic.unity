@@ -366,8 +366,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   FollowObj: {fileID: 1997812910}
   offset: {x: 0, y: 3}
-  lockX: 1
-  lockY: 0
+  xMult: 0
+  yMult: 1
 --- !u!81 &149895948
 AudioListener:
   m_ObjectHideFlags: 0
