@@ -10,8 +10,8 @@ public class Spring : MonoBehaviour
 
     private Animator anim;
 
-    private float springUpForce = 41;
-    private float springOutForce = 30;
+    private float springUpForce = 40;
+    private float springOutForce = 29;
 
     void Start()
     {

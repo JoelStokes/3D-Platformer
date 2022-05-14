@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 public class PlayerController : MonoBehaviour
 {
     //Jump
-    private float jumpStartForce = 31;
+    private float jumpStartForce = 30;
     private float jumpReleaseMult = .5f;
     private bool jumpStarting = false;
     private bool jumpEnding = false;
@@ -36,8 +36,8 @@ public class PlayerController : MonoBehaviour
     private bool onLeftWall = false;
     private bool onRightWall = false;
     private float wallSlowMax = 5;   //Only applied moving downwards
-    private float wallJumpOutwardsForce = 15;
-    private float wallJumpUpwardsForce = 27;
+    private float wallJumpOutwardsForce = 14;
+    private float wallJumpUpwardsForce = 25;
     private float wallJumpTimer = 0;
     private float wallJumpCount = .1f;
     private LayerMask wallJumpLayerMask;
@@ -73,6 +73,7 @@ public class PlayerController : MonoBehaviour
     private BoxCollider2D boxCollider;
     private ParticleSystem particles;
     private float particlePosition = .55f;
+    private TrailRenderer trail;
 
     void Start()
     {
@@ -81,6 +82,7 @@ public class PlayerController : MonoBehaviour
         wallJumpLayerMask = LayerMask.GetMask("Ground");
         boxCollider = GetComponent<BoxCollider2D>();
         particles = GetComponent<ParticleSystem>();
+        trail = GetComponent<TrailRenderer>();
 
         walkSpeed = maxSpeed / 2;
     }
@@ -123,6 +125,7 @@ public class PlayerController : MonoBehaviour
                 ApplyHurtCurve();
             } else {
                 hurt = false;
+                trail.emitting = true;
 
                 if (hurtRight){
                     rigi.velocity = new Vector2(hurtForceBack, hurtForceUp);
@@ -363,6 +366,7 @@ public class PlayerController : MonoBehaviour
             } else if (other.gameObject.tag == "Hurt"){
                 hurt = true;
                 hurtCurve = 0;
+                trail.emitting = false;
 
                 onLeftWall = false;
                 onRightWall = false;
