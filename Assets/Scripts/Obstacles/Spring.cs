@@ -10,8 +10,9 @@ public class Spring : MonoBehaviour
 
     private Animator anim;
 
-    private float springUpForce = 40;
-    private float springOutForce = 29;
+    private float springUpForce = 35f;
+    private float springOutForce = 22.5f;
+    private float springOutHeightDifference = 2.5f;
 
     void Start()
     {
@@ -38,7 +39,7 @@ public class Spring : MonoBehaviour
         float yForce = 0;
         
         if (diagonal){
-            yForce = springUpForce - 5;
+            yForce = springUpForce - springOutHeightDifference;
             if (inverted){
                 xForce = springOutForce;
             } else {

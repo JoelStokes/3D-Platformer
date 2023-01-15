@@ -1179,7 +1179,7 @@ CompositeCollider2D:
       - {x: 9.5, y: 9.5}
       - {x: 8.5, y: 9.5}
       - {x: 8.5, y: 7.5}
-  m_VertexDistance: 0.1
+  m_VertexDistance: 0.4
   m_OffsetDistance: 0
 --- !u!1 &4911510793016667990
 GameObject:

@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 public class PlayerController : MonoBehaviour
 {
     //Jump
-    private float jumpStartForce = 30;
+    private float jumpStartForce = 27.5f;
     private float jumpReleaseMult = .5f;
     private bool jumpStarting = false;
     private bool jumpEnding = false;
@@ -16,13 +16,15 @@ public class PlayerController : MonoBehaviour
 
     //Move
     private float accelerationSpeed = .6f;
-    private float maxSpeed = 15;
+    private float maxSpeed = 14.7f;
     private float currentMove = 0;
     private float deadZone = .6f;
     private float dampingGround = .8f;
     private float dampingAir = .9f;
     private float dampingTurn = .7f;
-    private float dampingTurnAir = .75f;
+    private float dampingTurnAir = .76f;
+    private float maxSpeedDampen = 1.25f;
+    private float maxSpeedDampenTurn = 1.3f;
 
     //Ground Checks
     private bool isGrounded = false;
@@ -45,6 +47,13 @@ public class PlayerController : MonoBehaviour
     private float wallSlideRightTimer = 0;
     private float wallSlideCount = .15f;
 
+    //Tube
+    private bool inTube = false;
+    private float tubeSpeed = 25f;
+    private float tubeExitForce = 25f;
+    private string tubeDirection;
+    private LayerMask tubeLayerMask;
+
     //Walk
     private float walkSpeed;    //Set in start, MaxSpeed / 2
     private bool walking = false;
@@ -55,7 +64,8 @@ public class PlayerController : MonoBehaviour
     //Spring
     private bool springJump = false;    //used to prevent jump release for quicker descent (fixed spring jump height)
     private float springTimer = 0;
-    private float springCount = .25f;
+    private float springCount = .1f;
+    private float sideSpringCount = .25f;
 
     //Stun Mode (Hurt Knockback)
     private bool hurt = false;
@@ -80,6 +90,7 @@ public class PlayerController : MonoBehaviour
         rigi = GetComponent<Rigidbody2D>();
         groundLayerMask = LayerMask.GetMask("Ground") | LayerMask.GetMask("One-Way");
         wallJumpLayerMask = LayerMask.GetMask("Ground");
+        tubeLayerMask = LayerMask.GetMask("Tube Trigger");
         boxCollider = GetComponent<BoxCollider2D>();
         particles = GetComponent<ParticleSystem>();
         trail = GetComponent<TrailRenderer>();
@@ -136,11 +147,28 @@ public class PlayerController : MonoBehaviour
                 stunTimer = stunCount;
             }
         }
+
+        if (inTube){    //Apply Tube Transform movement
+            switch (tubeDirection){
+                case "up":
+                    transform.position = new Vector3(transform.position.x, transform.position.y + (tubeSpeed * Time.deltaTime));
+                    break;
+                case "down":
+                    transform.position = new Vector3(transform.position.x, transform.position.y - (tubeSpeed * Time.deltaTime));
+                    break;
+                case "left":
+                    transform.position = new Vector3(transform.position.x - (tubeSpeed * Time.deltaTime), transform.position.y);
+                    break;
+                default:
+                    transform.position = new Vector3(transform.position.x + (tubeSpeed * Time.deltaTime), transform.position.y);
+                    break;
+            }
+        }
     }
 
     void FixedUpdate()
     {
-        if (!hurt && stunTimer <= 0){
+        if (!hurt && stunTimer <= 0 && !inTube){
             if (CheckGrounded()){   //Set Grounded
                 groundedTimer = groundedCount;
                 isGrounded = true;
@@ -173,7 +201,7 @@ public class PlayerController : MonoBehaviour
             } else if (jumpStarting && ((onLeftWall || onRightWall) || (wallSlideLeftTimer > 0 || wallSlideRightTimer > 0)) && wallJumpTimer <= 0 && springTimer <= 0){
                 ApplyWallJump();
                 jumpPressedTimer = 0;
-            } else if (jumpEnding && !springJump){
+            } else if (jumpEnding && !springJump && !inTube){
                 if (rigi.velocity.y > 0){   //Don't apply jump reduction if apex of jump already hit
                     ApplyJump(rigi.velocity.y * jumpReleaseMult);
                 }
@@ -194,6 +222,39 @@ public class PlayerController : MonoBehaviour
 
             if (springTimer <= 0){
                 rigi.velocity = Vector2.ClampMagnitude(rigi.velocity, maxVelocity); //Prevent falling too fast, avoid clipping through walls
+            }
+        } else if (inTube){ //Use raycast to check for bends / exit in tube
+            Vector2 raycastDirection;
+
+            switch (tubeDirection){
+                case "up":
+                    raycastDirection = Vector2.up;
+                    break;
+                case "down":
+                    raycastDirection = Vector2.down;
+                    break;
+                case "left":
+                    raycastDirection = Vector2.left;
+                    break;
+                default:
+                    raycastDirection = Vector2.right;
+                    break;
+            }
+            RaycastHit2D hit = Physics2D.Raycast(new Vector2(transform.position.x, transform.position.y) - (raycastDirection * .4f), raycastDirection, .4f, tubeLayerMask);
+
+            if (hit.collider != null && hit.transform.gameObject.tag == "Tube")
+            {                
+                Tube tubeScript = hit.transform.gameObject.GetComponent<Tube>();
+                
+                if (tubeDirection != tubeScript.direction.ToString()){
+                    transform.position = new Vector3(hit.transform.position.x, hit.transform.position.y, transform.position.z); //Recenter onto tube turn if different hit
+                }
+
+                if (inTube && tubeScript.isExit){
+                    ExitTube();
+                } else if (inTube){
+                    tubeDirection = tubeScript.direction.ToString();
+                }
             }
         }
     }
@@ -253,8 +314,6 @@ public class PlayerController : MonoBehaviour
             dampenedVelocity *= dampingTurnAir;
         }
 
-        float newSpeed = ((value * accelerationSpeed) + dampenedVelocity);
-
         float maxCheck;
         if (walking){
             maxCheck = walkSpeed;
@@ -262,10 +321,20 @@ public class PlayerController : MonoBehaviour
             maxCheck = maxSpeed;
         }
 
-        if (newSpeed > maxCheck){
-            newSpeed = maxCheck;
+        float newSpeed = ((value * accelerationSpeed) + dampenedVelocity);
+
+        if (newSpeed > maxCheck){  //Fast move right & hold right, retain some momentum. If fast right & trying to slow, immediately drop to maxSpeed
+            if (value > 0){
+                 newSpeed = newSpeed - maxSpeedDampen;    //Slow degrade to max speed when matching direction
+            } else {
+                newSpeed = newSpeed - maxSpeedDampenTurn;   //Sharper degrade due to holding against the speed
+            }
         } else if (newSpeed < -maxCheck){
-            newSpeed = -maxCheck;
+            if (value < 0){
+                newSpeed = newSpeed + maxSpeedDampen;
+            } else {
+                newSpeed = newSpeed + maxSpeedDampenTurn;
+            }
         }
 
         rigi.velocity = new Vector2(newSpeed, rigi.velocity.y);
@@ -283,7 +352,9 @@ public class PlayerController : MonoBehaviour
     }
 
     private void ApplyJump(float value){
-        rigi.velocity = new Vector2(rigi.velocity.x, value);
+        if (!inTube){
+            rigi.velocity = new Vector2(rigi.velocity.x, value);
+        }
     }
 
     private void ApplyWallJump(){
@@ -309,10 +380,14 @@ public class PlayerController : MonoBehaviour
 
     public void Jump(InputAction.CallbackContext context){
         if (context.phase == InputActionPhase.Started){
-            jumpStarting = true;
-            jumpPressedTimer = jumpPressedCount;
+            if (!inTube){
+                jumpStarting = true;
+                jumpPressedTimer = jumpPressedCount;
+            }
         } else if (context.phase == InputActionPhase.Canceled){
-            jumpEnding = true;
+            if (!inTube){
+                jumpEnding = true;
+            }
         }
     }
 
@@ -325,6 +400,26 @@ public class PlayerController : MonoBehaviour
             walking = true;
         } else if (context.phase == InputActionPhase.Canceled){
             walking = false;
+        }
+    }
+
+    private void ExitTube(){
+        rigi.isKinematic = false;
+        inTube = false;
+
+        switch (tubeDirection){
+            case "up":
+                rigi.velocity = new Vector2(0, tubeExitForce);
+                break;
+            case "down":
+                rigi.velocity = new Vector2(0, -tubeExitForce);
+                break;
+            case "right":
+                rigi.velocity = new Vector2(tubeExitForce, 0);
+                break;
+            default:
+                rigi.velocity = new Vector2(-tubeExitForce, 0);
+                break;
         }
     }
 
@@ -353,13 +448,17 @@ public class PlayerController : MonoBehaviour
     }
 
     void OnTriggerEnter2D(Collider2D other){
-        if (!hurt && stunTimer <= 0){
+        if (!hurt && stunTimer <= 0 && !inTube){
             if (other.gameObject.tag == "Death"){
                 SceneManager.LoadScene("AlphaStart");
             } else if (other.gameObject.tag == "Switch"){
                 other.gameObject.GetComponent<SwitchButton>().ActivateSwitch();
             } else if (other.gameObject.tag == "Spring"){
-                springTimer = springCount;
+                if (other.gameObject.GetComponent<Spring>().diagonal){
+                    springTimer = sideSpringCount;
+                } else {
+                    springTimer = springCount;
+                }
                 springJump = true;
 
                 other.gameObject.GetComponent<Spring>().ApplyForce(rigi);
@@ -383,6 +482,19 @@ public class PlayerController : MonoBehaviour
                     hurtRight = true;
                 } else {
                     hurtRight = false;
+                }
+            } else if (other.gameObject.tag == "Tube"){
+                Tube tubeScript = other.gameObject.GetComponent<Tube>();
+
+                if (!inTube && tubeScript.isEntrance){
+                    inTube = true;
+                    onLeftWall = false;
+                    onRightWall = false;
+                    isGrounded = false;
+                    rigi.isKinematic = true;
+                    tubeDirection = tubeScript.direction.ToString();
+                    rigi.velocity = Vector2.zero;
+                    transform.position = new Vector3(other.gameObject.transform.position.x, other.gameObject.transform.position.y, transform.position.z);
                 }
             }
         }

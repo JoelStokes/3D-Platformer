@@ -9,6 +9,7 @@ TagManager:
   - Switch
   - Spring
   - Hurt
+  - Tube
   layers:
   - Default
   - TransparentFX
@@ -18,7 +19,7 @@ TagManager:
   - UI
   - Ground
   - One-Way
-  - 
+  - Tube Trigger
   - 
   - 
   - 
